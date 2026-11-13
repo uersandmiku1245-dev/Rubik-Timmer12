@@ -1,0 +1,167 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dưa Hấu Rubik Timer</title>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;min-height:100vh;color:white;
+ font-family:Arial,sans-serif;text-align:center;
+ background:
+ radial-gradient(circle at 15% 10%,#176c60 0,transparent 35%),
+ radial-gradient(circle at 90% 80%,#572d75 0,transparent 40%),
+ linear-gradient(135deg,#081b20,#111329,#080b17);
+ padding:22px 15px;
+}
+h1{font-size:30px;letter-spacing:2px;color:#83ffe0}
+.sub{color:#a8b9c7}
+.cube{
+ width:115px;height:115px;margin:20px auto;
+ display:grid;grid-template-columns:repeat(3,1fr);
+ gap:4px;transform:rotate(-8deg);
+}
+.cube span{border-radius:7px;background:#16c784;
+ box-shadow:0 0 12px #16c78466}
+.cube span:nth-child(2n){background:#f5d547}
+.cube span:nth-child(3n){background:#ef5555}
+.cube span:nth-child(4n){background:#398aff}
+#scramble{
+ background:#ffffff12;border:1px solid #ffffff25;
+ border-radius:14px;padding:15px;margin:15px auto;
+ max-width:500px;line-height:1.8;color:#bdf8ed;
+}
+.timer{
+ font-size:65px;font-weight:bold;
+ margin:35px 0 25px;font-variant-numeric:tabular-nums;
+}
+button{
+ border:0;border-radius:15px;padding:16px 22px;
+ font-size:16px;font-weight:bold;cursor:pointer;
+ color:white;background:#168d78;margin:6px;
+}
+button:active{transform:scale(.97)}
+#hold{width:min(85%,340px);height:75px;
+ background:linear-gradient(120deg,#12a88d,#2674b9);
+ font-size:20px;touch-action:none;user-select:none}
+.stop{background:#c3445d}
+.card{
+ background:#ffffff0d;border:1px solid #ffffff20;
+ border-radius:16px;padding:16px;margin:18px auto;
+ max-width:500px;text-align:left
+}
+</style>
+</head>
+<body>
+<h1>Dưa Hấu</h1>
+<div class="sub">RUBIK SPEED TIMER 🍉</div>
+
+<div class="cube">
+<span></span><span></span><span></span>
+<span></span><span></span><span></span>
+<span></span><span></span><span></span>
+</div>
+
+<div id="scramble">Đang tạo đề...</div>
+<button onclick="newScramble()">🔀 Đề mới</button>
+
+<div class="timer" id="timer">0.000</div>
+
+<button id="hold">NHẤN GIỮ 0.5 GIÂY</button>
+<br>
+<button class="stop" onclick="stopTimer()">DỪNG NGAY</button>
+
+<div class="card">
+<b>🏆 Best Time:</b> <span id="best">--</span>
+<br><br>
+<b>📋 Lịch sử giải</b>
+<div id="history">Chưa có lần giải nào.</div>
+</div>
+
+<script>
+let moves=["R","L","U","D","F","B"];
+let suffix=["","'","2"];
+let scramble="";
+let running=false,started=false;
+let start=0,raf;
+let holdTimer=null,ready=false;
+let times=JSON.parse(localStorage.getItem("duahauTimes")||"[]");
+
+function newScramble(){
+ let result=[],last="";
+ for(let i=0;i<20;i++){
+  let m;
+  do{m=moves[Math.floor(Math.random()*6)]}
+  while(m===last);
+  last=m;
+  result.push(m+suffix[Math.floor(Math.random()*3)]);
+ }
+ scramble=result.join(" ");
+ document.getElementById("scramble").textContent=scramble;
+}
+function format(ms){return (ms/1000).toFixed(3)}
+function update(){
+ if(!running)return;
+ document.getElementById("timer").textContent=format(performance.now()-start);
+ raf=requestAnimationFrame(update);
+}
+function begin(){
+ if(running)return;
+ running=true;started=true;
+ start=performance.now();
+ update();
+}
+function stopTimer(){
+ if(!running)return;
+ running=false;
+ cancelAnimationFrame(raf);
+ let result=format(performance.now()-start);
+ document.getElementById("timer").textContent=result;
+ times.unshift(result);
+ times=times.slice(0,20);
+ localStorage.setItem("duahauTimes",JSON.stringify(times));
+ render();
+ newScramble();
+}
+const hold=document.getElementById("hold");
+function down(e){
+ e.preventDefault();
+ if(running){stopTimer();return;}
+ if(ready)return;
+ ready=true;
+ hold.textContent="SẴN SÀNG...";
+ hold.style.background="#d69b37";
+ holdTimer=setTimeout(()=>{
+  hold.textContent="THẢ TAY ĐỂ BẮT ĐẦU";
+  hold.style.background="#16b89a";
+ },500);
+}
+function up(e){
+ if(!ready)return;
+ clearTimeout(holdTimer);
+ if(running)return;
+ if(holdTimer && hold.textContent==="THẢ TAY ĐỂ BẮT ĐẦU"){
+  begin();
+ }
+ ready=false;
+ hold.textContent="NHẤN GIỮ 0.5 GIÂY";
+ hold.style.background="";
+}
+hold.addEventListener("pointerdown",down);
+hold.addEventListener("pointerup",up);
+hold.addEventListener("pointercancel",()=>{
+ clearTimeout(holdTimer);ready=false;
+});
+function render(){
+ document.getElementById("history").innerHTML=
+ times.map((t,i)=>`${i+1}. ${t}s`).join("<br>")||"Chưa có lần giải nào.";
+ let best=times.length?Math.min(...times.map(Number)):"--";
+ document.getElementById("best").textContent=
+ best==="--"?"--":best+"s";
+}
+newScramble();render();
+</script>
+</body>
+</html>
